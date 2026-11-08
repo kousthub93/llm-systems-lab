@@ -26,8 +26,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Unit tests
         run: pytest -q
-      # The recorded outputs are fixed, so this step catches changes to the metric
-      # code itself: if scoring changes, the re-scored numbers drift from the baseline.
+      # Check the recorded outputs against the stored baseline. (Metric-code changes
+      # are caught by the unit tests above.)
       - name: Re-score recorded outputs against the baseline
         if: hashFiles('03-evals/data/project2_generations.jsonl') != ''
-        run: ragevals check data/project2_generations.jsonl --baseline baselines/project2.json --tolerance 0.002 --rel-tolerance 0.01
+        run: ragevals check data/project2_generations.jsonl --baseline baselines/project2.json --tolerance 0.002
