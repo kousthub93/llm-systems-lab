@@ -1,0 +1,43 @@
+{
+  "description": "Project 2 generation results as measured on 100 SQuAD v2 questions (values rounded to 3 decimals). Re-summarizing project2_generations.jsonl should reproduce these.",
+  "modes": {
+    "closed-book": {
+      "n": 100,
+      "EM": 0.10,
+      "F1": 0.242,
+      "idk_rate": 0.0,
+      "prompt_tokens": 45.87,
+      "p50_gen_s": 0.309
+    },
+    "hybrid top-5": {
+      "n": 100,
+      "EM": 0.58,
+      "F1": 0.766,
+      "idk_rate": 0.0,
+      "retrieval_hit": 0.91,
+      "F1_if_hit": 0.821,
+      "F1_if_miss": 0.201,
+      "idk_if_miss": 0.0,
+      "cite_present": 1.0,
+      "cite_valid": 0.97,
+      "cite_correct": 0.73,
+      "prompt_tokens": 960.76,
+      "p50_gen_s": 2.310
+    },
+    "hybrid + MiniLM top-5": {
+      "n": 100,
+      "EM": 0.60,
+      "F1": 0.792,
+      "idk_rate": 0.0,
+      "retrieval_hit": 0.95,
+      "F1_if_hit": 0.833,
+      "F1_if_miss": 0.0,
+      "idk_if_miss": 0.0,
+      "cite_present": 1.0,
+      "cite_valid": 0.93,
+      "cite_correct": 0.70,
+      "prompt_tokens": 967.87,
+      "p50_gen_s": 2.337
+    }
+  }
+}
