@@ -1,0 +1,28 @@
+name: 04-agents
+
+on:
+  pull_request:
+    paths:
+      - "04-agents/**"
+      - ".github/workflows/04-agents.yml"
+  push:
+    branches: [main]
+    paths:
+      - "04-agents/**"
+      - ".github/workflows/04-agents.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 04-agents
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Unit tests
+        run: pytest -q
