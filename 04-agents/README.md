@@ -2,7 +2,7 @@
 
 `agentlab` is a small agent loop written from scratch: the model picks an action, the code runs it, the result goes back to the model, and this repeats until the model answers or a budget runs out. It has no runtime dependencies. The model is just a function from chat messages to text, so the same loop runs against a scripted fake in tests and a real open model in Colab.
 
-**Status:** step 2 of 4. The loop, tool registry, parser, hybrid retriever and `search` tool are done, with 59 tests. The Qwen runner and the HotpotQA evaluation come next (see below).
+**Status:** step 3 of 4 is built but not yet run. The loop, tool registry, retriever, `search` tool, HotpotQA data prep and the three-mode runner are done, with 88 tests. The Colab notebook that runs them against Qwen has not been executed yet, so there are no results here yet.
 
 ## Why
 
@@ -15,7 +15,7 @@ cd 04-agents
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest                      # 59 tests
+pytest                      # 88 tests
 python examples/demo.py     # watch a scripted run
 ```
 
@@ -56,7 +56,10 @@ src/agentlab/
   prompt.py    system prompt built from the tool list
   loop.py      Agent.run(): the loop, budgets, loop detection, per-step trace
   retrieval.py HybridRetriever (dense + BM25 + RRF + optional re-rank) and make_search_tool
-tests/         59 tests, all using a scripted fake model and fake embedders
+  hotpot.py    HotpotQA row parsing, corpus pooling, EM/F1, retrieval-ceiling check
+  runner.py    closed-book / single-shot / agent runs, per-question records, summaries, trace printing
+notebooks/     hotpotqa_agent.ipynb: the Colab runner (Qwen2.5-7B-Instruct, 4-bit)
+tests/         88 tests, all using a scripted fake model and fake embedders
 examples/      demo.py
 ```
 
@@ -68,11 +71,29 @@ The models are injected as plain functions, so the logic is tested with fakes an
 
 It keeps the Project 2 invariant, which has a test: a re-ranker only reorders its pool, so it cannot promote a passage the hybrid step left out.
 
+## The experiment
+
+Same model (Qwen2.5-7B-Instruct, 4-bit), same 100 HotpotQA questions, three modes:
+
+| mode | what it does |
+|---|---|
+| closed-book | answers from memory |
+| single-shot RAG | one search with the raw question, answers from the top 5 passages |
+| agent | the loop in this package: the model picks searches and decides when to stop |
+
+The corpus pools the paragraphs of 1000 questions (the 100 evaluated plus 900 more), so the agent searches thousands of paragraphs, not just its own 10. That is easier than open-domain Wikipedia, and the write-up has to say so.
+
+Each record also stores `gold_seen` and `both_seen`: which of the two supporting paragraphs the model was actually shown. That separates "retrieval never found the evidence" from "the model had it and still got it wrong".
+
+**Run it:** push this folder, then open
+`https://colab.research.google.com/github/kousthub93/llm-systems-lab/blob/main/04-agents/notebooks/hotpotqa_agent.ipynb`
+on a T4 runtime. Read the smoke-test traces in P4-3 before starting the long run in P4-4.
+
 ## Next
 
 1. ~~A `search` tool backed by the Project 2 retriever.~~ Done.
-2. A Colab runner that plugs Qwen2.5-7B-Instruct (4-bit) in as the model.
-3. HotpotQA evaluation: agent vs single-shot RAG on EM and F1, plus steps per question, error rates and cost, scored with `ragevals`.
+2. ~~A Colab runner that plugs Qwen in as the model.~~ Built, not yet run.
+3. Run it, read the traces, fix what they show, then record the results here. Score the output with `ragevals` (needs a small extension for agent fields such as steps and errors).
 4. A LangGraph port of the same loop, and a write-up comparing the two.
 
 ## Limitations
