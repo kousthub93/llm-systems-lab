@@ -2,7 +2,7 @@
 
 `agentlab` is a small agent loop written from scratch: the model picks an action, the code runs it, the result goes back to the model, and this repeats until the model answers or a budget runs out. It has no runtime dependencies. The model is just a function from chat messages to text, so the same loop runs against a scripted fake in tests and a real open model in Colab.
 
-**Status:** step 1 of 4. The loop, tool registry, parser and tests are done. The retriever tool, the Qwen runner and the HotpotQA evaluation come next (see below).
+**Status:** step 2 of 4. The loop, tool registry, parser, hybrid retriever and `search` tool are done, with 59 tests. The Qwen runner and the HotpotQA evaluation come next (see below).
 
 ## Why
 
@@ -15,7 +15,7 @@ cd 04-agents
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest                      # 44 tests
+pytest                      # 59 tests
 python examples/demo.py     # watch a scripted run
 ```
 
@@ -55,18 +55,27 @@ src/agentlab/
   tools.py     Tool, ToolRegistry (validates args before running), ToolError
   prompt.py    system prompt built from the tool list
   loop.py      Agent.run(): the loop, budgets, loop detection, per-step trace
-tests/         44 tests, all using a scripted fake model
+  retrieval.py HybridRetriever (dense + BM25 + RRF + optional re-rank) and make_search_tool
+tests/         59 tests, all using a scripted fake model and fake embedders
 examples/      demo.py
 ```
 
+## The search tool
+
+`agentlab.retrieval` is the Project 2 retrieval recipe wrapped in a class: bge-small dense search and BM25 (with the stopword tokenizer) fused with weighted RRF, then an optional cross-encoder re-rank of a candidate pool. Differences from Project 2: no chunking (HotpotQA paragraphs are already short), and the title is part of the indexed text.
+
+The models are injected as plain functions, so the logic is tested with fakes and no GPU. In Colab, `HybridRetriever.from_models(passages)` loads the real ones (`pip install -e ".[retrieval]"`). `make_search_tool(retriever, k=3)` turns a retriever into the agent's `search` tool; results come back as `[Title] passage text`.
+
+It keeps the Project 2 invariant, which has a test: a re-ranker only reorders its pool, so it cannot promote a passage the hybrid step left out.
+
 ## Next
 
-1. A `search` tool backed by the Project 2 retriever (hybrid + re-ranker).
+1. ~~A `search` tool backed by the Project 2 retriever.~~ Done.
 2. A Colab runner that plugs Qwen2.5-7B-Instruct (4-bit) in as the model.
 3. HotpotQA evaluation: agent vs single-shot RAG on EM and F1, plus steps per question, error rates and cost, scored with `ragevals`.
 4. A LangGraph port of the same loop, and a write-up comparing the two.
 
 ## Limitations
 
-- Nothing here has run against a real model yet. The tests prove the loop handles each failure path. They say nothing about how often a real model triggers them.
+- Nothing here has run against a real LLM or the real embedding models yet. The retriever's tests use a crude hashed bag-of-words embedder, so real bge and MiniLM behavior is only checked once it runs in Colab. The tests prove the loop handles each failure path. They say nothing about how often a real model triggers them.
 - Tool arguments are checked by name only, not by type. A wrong type surfaces as a `tool_failed` error from the tool itself.
