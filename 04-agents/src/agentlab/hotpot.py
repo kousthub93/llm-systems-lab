@@ -56,15 +56,20 @@ def f1_score(pred: str, gold: str) -> float:
 
 def normalize_row(row: dict) -> dict:
     ctx = row["context"]
-    pairs = list(zip(ctx["title"], ctx["sentences"])) if isinstance(ctx, dict) else [(t, s) for t, s in ctx]
-    sf = row.get("supporting_facts") or []
-    sf_titles = sf["title"] if isinstance(sf, dict) else [t for t, _ in sf]
+    if isinstance(ctx, dict):          # columnar; values may be numpy arrays when read from parquet
+        pairs = [(str(t), [str(x) for x in s]) for t, s in zip(ctx["title"], ctx["sentences"])]
+    else:
+        pairs = [(str(t), [str(x) for x in s]) for t, s in ctx]
+    sf = row.get("supporting_facts")
+    if sf is None:
+        sf = []
+    sf_titles = [str(t) for t in sf["title"]] if isinstance(sf, dict) else [str(t) for t, _ in sf]
     return {
-        "id": row.get("_id", row.get("id")),
-        "question": row["question"],
-        "answer": row["answer"],
-        "type": row.get("type", ""),
-        "level": row.get("level", ""),
+        "id": str(row.get("_id", row.get("id"))),
+        "question": str(row["question"]),
+        "answer": str(row["answer"]),
+        "type": str(row.get("type", "")),
+        "level": str(row.get("level", "")),
         "gold_titles": list(dict.fromkeys(sf_titles)),
         "paragraphs": [(title, " ".join(" ".join(sents).split())) for title, sents in pairs],
     }

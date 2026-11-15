@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from agentlab.hotpot import (build_hotpot, exact_match, f1_score, normalize_answer, normalize_row,
@@ -54,6 +55,17 @@ def test_normalize_row_handles_both_shapes_identically():
     assert a == b
     assert a["id"] == "q1" and a["gold_titles"] == ["A", "B"]  # duplicate supporting title collapsed
     assert a["paragraphs"][0] == ("A", "First sentence of A. Second sentence.")  # whitespace tidied
+
+
+def test_normalize_row_accepts_numpy_arrays_as_read_from_parquet():
+    h = hf_row(1)
+    parquet_like = dict(h)
+    parquet_like["context"] = {"title": np.array(h["context"]["title"], dtype=object),
+                               "sentences": np.array([np.array(s, dtype=object) for s in h["context"]["sentences"]],
+                                                     dtype=object)}
+    parquet_like["supporting_facts"] = {"title": np.array(h["supporting_facts"]["title"], dtype=object),
+                                        "sent_id": np.array(h["supporting_facts"]["sent_id"])}
+    assert normalize_row(parquet_like) == normalize_row(raw_row(1))
 
 
 def test_build_hotpot_pools_and_dedupes_paragraphs():
